@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenAI } from "@google/genai"
 
 const ai = new GoogleGenAI({
-    apiKey : 'AIzaSyDn1AcMbSWHqpVn2LdWEsCjx4bdyGBvD4o'
+    apiKey : process.env.NEXT_PUBLIC_GEMINI_API_KEY
 })
 
 // Polyfill for base64 encoding in edge runtime
