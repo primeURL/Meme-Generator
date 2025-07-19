@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       Your task is to:
       - Analyze the given meme image deeply.
       - Describe it in a single vivid sentence that captures what is happening visually and the humor or message behind it.
-      - Identify and output exactly 10 relevant, context-aware, SEO-friendly tags.
+      - Identify and output exactly 15-18 relevant, context-aware, SEO-friendly tags.
       - Give Meaningfull Name to Image Template in 2-3 words
       
       Output format:
@@ -105,7 +105,6 @@ function cleanLLMJsonBlock(rawString : any) {
       // Step 2: Parse the cleaned JSON string
       const data = JSON.parse(cleanedRaw);
      
-      console.log('data----->>>',data)
       // Step 3: Initialize result object
       const result : any = {
        
