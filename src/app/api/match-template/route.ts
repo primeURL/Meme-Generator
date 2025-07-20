@@ -9,14 +9,23 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 const ai = new GoogleGenAI({ apiKey: geminiKey })
 
-async function extractKeywordsAndDescriptionWithGemini(prompt: string): Promise<{ tags: string[], description: string }> {
+async function extractKeywordsAndDescriptionWithGemini(prompt: string): Promise<{ tags: string[], description: string ,number_of_text :number}> {
   const contents = [
     {
       text: `You are an expert meme prompt analyst.
-      \n\nGiven the following meme prompt, extract:\n-
-       A single vivid scene description (1 sentence)\n- 10 relevant, context-aware, SEO-friendly tags (comma separated, lowercase, no more than 3 words each)
-       \n\nPrompt: \"${prompt}\"\n\nOutput format:\n{\n  \"description\": \"...\",\n  \"relevant_tags\": [\"tag1\", \"tag2\", ...]\n}\n\n
-       Return only the final JSON object. No additional explanation.`
+        Given the following meme prompt, extract:
+         - A single vivid scene description (1 sentence)
+         - 15 relevant, context-aware, SEO-friendly tags (comma separated, lowercase, no more than 3 words each)
+         - Analyze the promt to determine how many distinct text overlays (e.g., characters, labels, speech/thought bubbles) can fit naturally in the image. Return an exact number (default is 2).
+            Prompt: ${prompt}
+            Output format:
+                {
+                  "description": \"...\",\n 
+                  "relevant_tags": [\"tag1\", \"tag2\", ...],
+                  "number_of_text" "2"
+                }
+
+        Return only the final JSON object. No additional explanation.`
     }
   ];
   const response = await ai.models.generateContent({
@@ -30,7 +39,8 @@ async function extractKeywordsAndDescriptionWithGemini(prompt: string): Promise<
   // console.log('cleaned res',res)
   return {
     tags: res.relevant_tags || [],
-    description: res.description || ''
+    description: res.description || '',
+    number_of_text : Number(res.number_of_text) || 2
   }
 }
 
@@ -69,6 +79,7 @@ export async function POST(req: NextRequest) {
   let description = ''
   try {
     const result = await extractKeywordsAndDescriptionWithGemini(prompt)
+    console.log('result',result)
     tags = result.tags
     description = result.description
   } catch (err) {
@@ -103,14 +114,14 @@ export async function POST(req: NextRequest) {
 
   // 4. Filter templates with score > 0 (at least one match)
   const scored = templates.map(t => ({ ...t, _score: scoreTemplate(t) }))
-  console.log('scored',scored)
+  // console.log('scored',scored)
   const matches = scored.filter(t => t._score > 0)
   matches.sort((a, b) => b._score - a._score)
 
   // Limit to top 5 matches
   const topMatches = matches.slice(0, 5)
 
-  console.log('matches', topMatches)
+  // console.log('matches', topMatches)
   if (topMatches.length === 0) {
     return new Response(JSON.stringify({ error: 'No matching templates found' }), { status: 404 })
   }
