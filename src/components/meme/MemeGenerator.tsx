@@ -23,7 +23,7 @@ export default function MemeGenerator() {
     setErrorMsg(null)
     setGeneratedMemes([])
     try {
-      // Call the API to get all matching templates
+      // Call the API to get matching templates
       const res = await fetch('/api/match-template', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,37 +41,117 @@ export default function MemeGenerator() {
         setIsGenerating(false)
         return
       }
-      // For each template, generate a meme image
+      
+      // For each template, generate a meme image using Gemini LLM
       const memeImages: { image: string, template: any }[] = []
       for (const template of templates) {
-        const img = new window.Image()
-        img.crossOrigin = 'anonymous'
-        img.src = template.image_url
-        await new Promise((resolve, reject) => {
-          img.onload = resolve
-          img.onerror = reject
-        })
-        const canvas = document.createElement('canvas')
-        canvas.width = 400
-        canvas.height = 400
-        const ctx = canvas.getContext('2d')!
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-        ctx.font = 'bold 28px Arial'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'bottom'
-        ctx.lineWidth = 4
-        ctx.strokeStyle = '#fff'
-        ctx.fillStyle = '#000'
-        const lines = wrapText(ctx, prompt, canvas.width - 40)
-        const lineHeight = 36
-        let y = canvas.height - 20 - (lines.length - 1) * lineHeight
-        for (const line of lines) {
-          ctx.strokeText(line, canvas.width / 2, y)
-          ctx.fillText(line, canvas.width / 2, y)
-          y += lineHeight
+        try {
+          // Call the new API to generate meme with AI-determined text placement
+          const memeRes = await fetch('/api/generate-meme-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              imageUrl: template.image_url, 
+              prompt 
+            })
+          })
+          
+          if (!memeRes.ok) {
+            console.error(`Failed to generate meme for template ${template.name}`)
+            continue
+          }
+          
+          const memeData = await memeRes.json()
+          
+          if (memeData.type === 'image' && memeData.imageData) {
+            // Gemini returned the final image
+            memeImages.push({ 
+              image: memeData.imageData, 
+              template 
+            })
+          } else if (memeData.type === 'instructions') {
+            // Gemini returned placement instructions, render on frontend
+            const img = new window.Image()
+            img.crossOrigin = 'anonymous'
+            img.src = template.image_url
+            await new Promise((resolve, reject) => {
+              img.onload = resolve
+              img.onerror = reject
+            })
+            
+            const canvas = document.createElement('canvas')
+            canvas.width = 400
+            canvas.height = 400
+            const ctx = canvas.getContext('2d')!
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+            
+            // Apply Gemini's instructions
+            const instructions = memeData.instructions
+            ctx.font = `bold ${instructions.fontSize}px Arial`
+            ctx.textAlign = instructions.alignment as CanvasTextAlign
+            ctx.textBaseline = 'bottom'
+            ctx.lineWidth = instructions.strokeWidth
+            ctx.strokeStyle = instructions.strokeColor
+            ctx.fillStyle = instructions.color
+            
+            const lines = wrapText(ctx, instructions.text, canvas.width - 40)
+            const lineHeight = instructions.fontSize + 8
+            
+            // Calculate Y position based on instructions
+            let y: number
+            if (instructions.position === 'top') {
+              y = 20 + (lines.length - 1) * lineHeight
+            } else if (instructions.position === 'center') {
+              y = canvas.height / 2 + (lines.length - 1) * lineHeight / 2
+            } else {
+              // bottom (default)
+              y = canvas.height - 20 - (lines.length - 1) * lineHeight
+            }
+            
+            for (const line of lines) {
+              ctx.strokeText(line, canvas.width / 2, y)
+              ctx.fillText(line, canvas.width / 2, y)
+              y += lineHeight
+            }
+            
+            memeImages.push({ 
+              image: canvas.toDataURL('image/png'), 
+              template 
+            })
+          }
+        } catch (error) {
+          console.error(`Error generating meme for template ${template.name}:`, error)
+          // Fallback to basic text overlay if AI generation fails
+          const img = new window.Image()
+          img.crossOrigin = 'anonymous'
+          img.src = template.image_url
+          await new Promise((resolve, reject) => {
+            img.onload = resolve
+            img.onerror = reject
+          })
+          const canvas = document.createElement('canvas')
+          canvas.width = 400
+          canvas.height = 400
+          const ctx = canvas.getContext('2d')!
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+          ctx.font = 'bold 28px Arial'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'bottom'
+          ctx.lineWidth = 4
+          ctx.strokeStyle = '#fff'
+          ctx.fillStyle = '#000'
+          const lines = wrapText(ctx, prompt, canvas.width - 40)
+          const lineHeight = 36
+          let y = canvas.height - 20 - (lines.length - 1) * lineHeight
+          for (const line of lines) {
+            ctx.strokeText(line, canvas.width / 2, y)
+            ctx.fillText(line, canvas.width / 2, y)
+            y += lineHeight
+          }
+          memeImages.push({ image: canvas.toDataURL('image/png'), template })
         }
-        memeImages.push({ image: canvas.toDataURL('image/png'), template })
       }
+      
       setGeneratedMemes(memeImages)
     } catch (error) {
       setErrorMsg('Error generating meme')

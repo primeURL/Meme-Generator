@@ -12,7 +12,11 @@ const ai = new GoogleGenAI({ apiKey: geminiKey })
 async function extractKeywordsAndDescriptionWithGemini(prompt: string): Promise<{ tags: string[], description: string }> {
   const contents = [
     {
-      text: `You are an expert meme prompt analyst.\n\nGiven the following meme prompt, extract:\n- A single vivid scene description (1 sentence)\n- 10 relevant, context-aware, SEO-friendly tags (comma separated, lowercase, no more than 3 words each)\n\nPrompt: \"${prompt}\"\n\nOutput format:\n{\n  \"description\": \"...\",\n  \"relevant_tags\": [\"tag1\", \"tag2\", ...]\n}\n\nReturn only the final JSON object. No additional explanation.`
+      text: `You are an expert meme prompt analyst.
+      \n\nGiven the following meme prompt, extract:\n-
+       A single vivid scene description (1 sentence)\n- 10 relevant, context-aware, SEO-friendly tags (comma separated, lowercase, no more than 3 words each)
+       \n\nPrompt: \"${prompt}\"\n\nOutput format:\n{\n  \"description\": \"...\",\n  \"relevant_tags\": [\"tag1\", \"tag2\", ...]\n}\n\n
+       Return only the final JSON object. No additional explanation.`
     }
   ];
   const response = await ai.models.generateContent({
@@ -82,7 +86,7 @@ export async function POST(req: NextRequest) {
     const desc = (template.description || '').toLowerCase()
     const templateTags = (template.tags || []).map((t: string) => t.toLowerCase())
     let score = 0
-    for (const tag of templateTags) {
+    for (const tag of tags) {
       if (desc.includes(tag) || templateTags.some((t: string) => t.includes(tag))) {
         score++
       }
@@ -103,10 +107,13 @@ export async function POST(req: NextRequest) {
   const matches = scored.filter(t => t._score > 0)
   matches.sort((a, b) => b._score - a._score)
 
-  console.log('matches',matches)
-  if (matches.length === 0) {
+  // Limit to top 5 matches
+  const topMatches = matches.slice(0, 5)
+
+  console.log('matches', topMatches)
+  if (topMatches.length === 0) {
     return new Response(JSON.stringify({ error: 'No matching templates found' }), { status: 404 })
   }
 
-  return new Response(JSON.stringify({ templates: matches }), { status: 200 })
+  return new Response(JSON.stringify({ templates: topMatches }), { status: 200 })
 } 
