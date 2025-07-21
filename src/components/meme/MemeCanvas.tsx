@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { MemeTemplate, TextOverlay } from '@/types/meme'
+import { MemeTemplate } from '@/types/meme'
 
 interface MemeCanvasProps {
   template?: MemeTemplate | null

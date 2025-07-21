@@ -3,16 +3,13 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, Download, Share2 } from 'lucide-react'
-import MemeCanvas from './MemeCanvas'
-import TemplateSelector from './TemplateSelector'
-import { MemeTemplate, MemeGenerationRequest } from '@/types/meme'
+import { Loader2 } from 'lucide-react'
+// import { MemeTemplate } from '@/types/meme'
 
 export default function MemeGenerator() {
   const [prompt, setPrompt] = useState('')
-  const [selectedTemplate, setSelectedTemplate] = useState<MemeTemplate | null>(null)
+  // const [selectedTemplate, setSelectedTemplate] = useState<MemeTemplate | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedMemes, setGeneratedMemes] = useState<{ image: string, template: any }[]>([])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
