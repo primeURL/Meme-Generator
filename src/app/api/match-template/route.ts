@@ -74,41 +74,55 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'Prompt is required' }), { status: 400 })
   }
 
-  // 1. Use Gemini to extract tags/scene description from prompt
+  // 1. Extract number_of_text from Gemini (already done)
   let tags: string[] = []
   let description = ''
+  let number_of_text : any = null
   try {
     const result = await extractKeywordsAndDescriptionWithGemini(prompt)
-    console.log('result',result)
+    console.log('result----------1',result)
     tags = result.tags
     description = result.description
+    number_of_text = result.number_of_text // Make sure Gemini returns this!
   } catch (err) {
     return new Response(JSON.stringify({ error: 'Failed to extract keywords from Gemini' }), { status: 500 })
   }
 
-  // 2. Fetch all meme templates
+  // 2. Fetch all meme templates (make sure to select number_of_text)
   const { data: templates, error } = await supabase.from('meme_templates').select('*')
   if (error) {
     return new Response(JSON.stringify({ error: 'Failed to fetch templates' }), { status: 500 })
   }
 
-  // 3. Score each template by overlap with tags/description
+  // 3. Score each template
   function scoreTemplate(template: any) {
     const desc = (template.description || '').toLowerCase()
     const templateTags = (template.tags || []).map((t: string) => t.toLowerCase())
     let score = 0
+
+    // Tag and description overlap
     for (const tag of tags) {
       if (desc.includes(tag) || templateTags.some((t: string) => t.includes(tag))) {
         score++
       }
     }
-    // Also score for scene description overlap
     if (description) {
       const descWords = description.toLowerCase().split(/\W+/)
       for (const word of descWords) {
         if (word && desc.includes(word)) score += 0.5
       }
     }
+    // console.log('inside scoreTemplate',number_of_text)
+    // --- New: number_of_text matching ---
+    // if (number_of_text !== null && template.number_of_text !== undefined) {
+    //   if (template.number_of_text === number_of_text) {
+    //     score += 2 // Strong bonus for exact match
+    //   } else {
+    //     // Penalize by difference (optional)
+    //     score -= Math.abs(template.number_of_text - number_of_text) * 0.5
+    //   }
+    // }
+
     return score
   }
 
